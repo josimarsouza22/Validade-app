@@ -1,0 +1,5 @@
+{
+  "name": "Painel de Vencimento de Produtos",
+  "description": "Um painel para monitorar o vencimento de produtos com alertas visuais para itens próximos ao vencimento.",
+  "requestFramePermissions": []
+}
