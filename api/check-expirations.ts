@@ -29,7 +29,7 @@ export default async function handler(req: any, res: any) {
     // 3. Busca todos os produtos no banco de dados
     const productsRef = db.collection('products');
     const snapshot = await productsRef.get();
-    
+
     const criticalProducts: any[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -41,7 +41,7 @@ export default async function handler(req: any, res: any) {
 
       const expDate = new Date(product.expirationDate);
       expDate.setHours(0, 0, 0, 0);
-      
+
       const diffTime = expDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -83,7 +83,7 @@ export default async function handler(req: any, res: any) {
       const isExpired = p.daysRemaining < 0;
       const statusText = isExpired ? 'VENCIDO' : `Vence em ${p.daysRemaining} dias`;
       const statusColor = isExpired ? '#dc2626' : '#d97706'; // Vermelho ou Laranja
-      
+
       // Formata a data para o padrão brasileiro DD/MM/YYYY
       const parts = p.expirationDate.split('-');
       const formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : p.expirationDate;
@@ -109,8 +109,8 @@ export default async function handler(req: any, res: any) {
 
     // 6. Dispara o E-mail
     const { data, error } = await resend.emails.send({
-      from: 'Sistema de Validade <onboarding@resend.dev>', 
-      to: ['josimarsouza22@gmail.com'], // ⚠️ ATENÇÃO: COLOQUE O E-MAIL DELA AQUI
+      from: 'Sistema de Validade <onboarding@resend.dev>',
+      to: ['solangesoares.2016@outlook.com'], // ⚠️ ATENÇÃO: COLOQUE O E-MAIL DELA AQUI
       subject: '🚨 Alerta Diário: Produtos Vencidos ou Próximos do Vencimento',
       html: htmlContent,
     });
