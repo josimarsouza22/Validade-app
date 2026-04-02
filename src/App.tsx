@@ -32,12 +32,13 @@ interface Product {
   code: string;
   name: string;
   expirationDate: string;
+  quantity: number;
 }
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newProduct, setNewProduct] = useState({ code: '', name: '', expirationDate: '' });
+  const [newProduct, setNewProduct] = useState({ code: '', name: '', expirationDate: '', quantity: 1 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'expired' | 'near' | 'on-track'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,6 +127,7 @@ export default function App() {
         const code = row[0] || ''; // Coluna A
         const name = row[1] || 'Produto importado'; // Coluna B
         let expDate = row[2] || ''; // Coluna C
+        const quantity = parseInt(row[3]) || 1; // Coluna D
 
         if (expDate instanceof Date) {
           const year = expDate.getFullYear();
@@ -151,7 +153,8 @@ export default function App() {
           id: crypto.randomUUID(),
           code: String(code).trim(),
           name: String(name).trim(),
-          expirationDate: String(expDate).trim()
+          expirationDate: String(expDate).trim(),
+          quantity: quantity
         };
       }).filter(p => p.code && p.expirationDate);
 
@@ -208,7 +211,7 @@ export default function App() {
 
   const handleAddProduct = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newProduct.code || !newProduct.name || !newProduct.expirationDate) return;
+    if (!newProduct.code || !newProduct.name || !newProduct.expirationDate || !newProduct.quantity) return;
 
     if (editingProduct) {
       const updatedProduct = { ...editingProduct, ...newProduct };
@@ -234,20 +237,20 @@ export default function App() {
       }
     }
 
-    setNewProduct({ code: '', name: '', expirationDate: '' });
+    setNewProduct({ code: '', name: '', expirationDate: '', quantity: 1 });
     setIsModalOpen(false);
   };
 
   const startEditing = (product: Product) => {
     setEditingProduct(product);
-    setNewProduct({ code: product.code, name: product.name, expirationDate: product.expirationDate });
+    setNewProduct({ code: product.code, name: product.name, expirationDate: product.expirationDate, quantity: product.quantity || 1 });
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
-    setNewProduct({ code: '', name: '', expirationDate: '' });
+    setNewProduct({ code: '', name: '', expirationDate: '', quantity: 1 });
   };
 
   const removeProduct = async (id: string) => {
@@ -349,12 +352,13 @@ export default function App() {
       p.code,
       p.name,
       formatDateBR(p.expirationDate),
+      p.quantity || 1,
       `${calculateDaysRemaining(p.expirationDate)} dias`
     ]);
 
     autoTable(doc, {
       startY: 52,
-      head: [['Código', 'Produto', 'Vencimento', 'Dias Restantes']],
+      head: [['Código', 'Produto', 'Vencimento', 'Qtd', 'Dias Restantes']],
       body: tableData,
       theme: 'grid',
       headStyles: { 
@@ -372,14 +376,15 @@ export default function App() {
         0: { cellWidth: 35, halign: 'center' },
         1: { cellWidth: 'auto' },
         2: { cellWidth: 35, halign: 'center' },
-        3: { cellWidth: 35, halign: 'center' }
+        3: { cellWidth: 20, halign: 'center' },
+        4: { cellWidth: 35, halign: 'center' }
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252]
       },
       didParseCell: (data) => {
         // Destacar em vermelho no PDF se os dias forem <= 30
-        if (data.section === 'body' && data.column.index === 3) {
+        if (data.section === 'body' && data.column.index === 4) {
           const daysText = data.cell.raw as string;
           const days = parseInt(daysText);
           if (days <= 30) {
@@ -404,6 +409,7 @@ export default function App() {
     const dataToExport = products.map(p => ({
       'Código': p.code,
       'Nome': p.name,
+      'Quantidade': p.quantity || 1,
       'Vencimento': formatDateBR(p.expirationDate)
     }));
 
@@ -618,6 +624,7 @@ export default function App() {
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Código</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Produto</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vencimento</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Quantidade</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dias Restantes</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                 </tr>
@@ -647,6 +654,9 @@ export default function App() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                           {formatDateBR(product.expirationDate)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
+                          {product.quantity || 1}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -685,7 +695,7 @@ export default function App() {
                 </AnimatePresence>
                 {filteredProducts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                       Nenhum produto encontrado.
                     </td>
                   </tr>
@@ -789,6 +799,17 @@ export default function App() {
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                     value={newProduct.expirationDate}
                     onChange={(e) => setNewProduct({...newProduct, expirationDate: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Quantidade</label>
+                  <input 
+                    required
+                    type="number" 
+                    min="1"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    value={newProduct.quantity || 1}
+                    onChange={(e) => setNewProduct({...newProduct, quantity: Number(e.target.value)})}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
