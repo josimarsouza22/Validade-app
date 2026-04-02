@@ -184,21 +184,26 @@ export default function App() {
       if (newProductsToImport.length > 0) {
         // Sync with Firebase
         try {
-          const batch = writeBatch(db);
-          
-          newProductsToImport.forEach(p => {
-            batch.set(doc(db, 'products', p.id), p);
-          });
-          
-          await batch.commit();
+          const chunks = [];
+          for (let i = 0; i < newProductsToImport.length; i += 500) {
+            chunks.push(newProductsToImport.slice(i, i + 500));
+          }
+
+          for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            chunk.forEach(p => {
+              batch.set(doc(db, 'products', p.id), p);
+            });
+            await batch.commit();
+          }
           
           // Atualiza o estado local
           setProducts(prev => [...prev, ...newProductsToImport]);
           
           alert(`${newProductsToImport.length} novos produtos importados com sucesso!`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to sync bulk import:', error);
-          alert('Falha ao sincronizar com o banco de dados.');
+          alert('Falha ao sincronizar com o banco de dados. Detalhe: ' + (error.message || 'Erro Desconhecido'));
         }
       } else {
         alert('Nenhuma linha nova importada. Todas as linhas já existem ou são duplicadas.');
@@ -409,8 +414,8 @@ export default function App() {
     const dataToExport = products.map(p => ({
       'Código': p.code,
       'Nome': p.name,
-      'Quantidade': p.quantity || 1,
-      'Vencimento': formatDateBR(p.expirationDate)
+      'Vencimento': formatDateBR(p.expirationDate),
+      'Quantidade': p.quantity || 1
     }));
 
     // Criar a planilha
